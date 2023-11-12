@@ -1,15 +1,14 @@
-import { clamped, lerp } from "./util"
+import { lerp } from "./util"
 
 
-interface InterpolatorParams {
+type ExtrapolatorParams = {
   start: number
-  readerDistance: number[]
-  trackLength: number
+  getDistance: (from: number, to: number) => number
 }
 
 const WEIGHT_FACTOR = 0.6
 
-export const createInterpolator = ({start, readerDistance, trackLength}: InterpolatorParams) => {
+export const createExtrapolator = ({start, getDistance}: ExtrapolatorParams) => {
   // Related to current simulation
   const lastReadMilliseconds: number[] = []
   // Related to time on the event
@@ -18,23 +17,7 @@ export const createInterpolator = ({start, readerDistance, trackLength}: Interpo
 
   const speed: number[] = []
 
-  const getDistance = (from: number, to: number): number => {
-    // -1 to compensate for reader ids starting at 1 
-    from = clamped(from-1, 0, readerDistance.length-1)
-    to = clamped(to-1, 0, readerDistance.length-1)
-
-    if (from < to) {
-      return readerDistance[to] - readerDistance[from]
-    } else if (from > to) {
-      return (trackLength - readerDistance[from]) + readerDistance[to]
-    } else {
-      // This case is threated as a double read currently
-      return 0
-    }
-
-  }
-
-  const getInterpolatedDistance = (teamId: number): number => {
+  const getExtrapolatedDistance = (teamId: number): number => {
     const lastSeen = lastReadMilliseconds[teamId]
     const speedEstimate = speed[teamId]
     
@@ -43,7 +26,7 @@ export const createInterpolator = ({start, readerDistance, trackLength}: Interpo
     }
 
     const time = new Date().getTime() - lastSeen
-    const estimate = (time * speedEstimate) / trackLength
+    const estimate = time * speedEstimate
     return estimate
   }
 
@@ -55,7 +38,8 @@ export const createInterpolator = ({start, readerDistance, trackLength}: Interpo
       return
     }
 
-    const distance = getDistance(lastEventReadPosition[teamId], read.position)
+    // Adjust for reader indexes starting at 1
+    const distance = getDistance(lastEventReadPosition[teamId]-1, read.position-1)
     const newSpeed = distance / (read.time - (lastEventReadMilliseconds[teamId] ?? start))
     speed[teamId] = lerp(speed[teamId] ?? 0, newSpeed, WEIGHT_FACTOR)
 
@@ -66,6 +50,6 @@ export const createInterpolator = ({start, readerDistance, trackLength}: Interpo
 
   return {
     recordRead,
-    getInterpolatedDistance
+    getExtrapolatedDistance
   }
 }

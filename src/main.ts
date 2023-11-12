@@ -3,17 +3,34 @@ import './style.css'
 import { Balk, addBalk, createBalk, moveBalk } from './balk'
 import { loop } from './loop'
 import { State, Team } from './types'
-import { clampedLerp, teamSort } from './util'
-import { createInterpolator } from './interpolate'
+import { clamped, clampedLerp, teamSort } from './util'
+import { createExtrapolator } from './extrapolate'
 import { createReplayer } from './replayer/replayer'
 
+type DistanceCalculatorParameters = { distances: number[], totalLength: number}
+const createDistanceCalculator = ({distances, totalLength}: DistanceCalculatorParameters) => {
+  return {
+    getDistance: (from: number, to: number, totalLengthSamePosition: boolean = true): number => {
+      from = clamped(from, 0, distances.length-1)
+      to = clamped(to, 0, distances.length-1)
+
+      if (from < to) {
+        return (distances[to] - distances[from]) / totalLength
+      } else if (from > to) {
+        return ((totalLength - distances[from]) + distances[to]) / totalLength
+      } else {
+        return totalLengthSamePosition ? 1 : 0
+      }
+    }
+  }
+}
 
 const getTargetScore = (team: number, total: number): State => {
   const passed = fetchedTeamScores[team] ?? 0
-  const recordedProgress = ((passed % total) / total)
-
+  const recordedProgress = getDistance(0, passed % total, false)
+  console.log(recordedProgress)
   // Never fill the bar entirely with interpolation 
-  const estimatedDistance = Math.min((1 - recordedProgress) - 0.01, getInterpolatedDistance(team))
+  const estimatedDistance = Math.min((1 - recordedProgress) - 0.01, getExtrapolatedDistance(team))
 
   return ({
     laps: Math.floor(passed / total),
@@ -68,13 +85,18 @@ const fetchedTeamScores: number[] = []
 // Create visual elements for each team
 addBalk(...teams.map(t => t.balk))
 
-// Create interpolator
+// Create distance calculator
+const { getDistance } = createDistanceCalculator({
+  distances: [0, 142.60, 213.55, 312.05, 418.87],
+  totalLength: 515
+})
+
+// Create extrapolator
 const eventStartMilliseconds = eventStart.getTime()
 
-const { recordRead, getInterpolatedDistance } = createInterpolator({
+const { recordRead, getExtrapolatedDistance } = createExtrapolator({
   start: eventStartMilliseconds,
-  readerDistance: [0, 142.60, 213.55, 312.05, 418.87],
-  trackLength: 515
+  getDistance
 })
 
 setInterval(() => {

@@ -4,11 +4,11 @@ import { Command, command } from "./commands"
 import { delay } from "../util"
 
 
-interface ReplayerParameters {
+type ReplayerParameters = {
   fetchData: () => Promise<unknown>
 }
 
-export interface TeamScore {
+export type TeamScore = {
   score: number
   lastReadPosition: number
   lastReadMilliseconds: number

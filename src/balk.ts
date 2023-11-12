@@ -1,6 +1,6 @@
 import { clampBetweenZeroAndOne, clamped, toId } from "./util"
 
-export interface Balk {
+export type Balk = {
   id: string
   root: HTMLElement
   setScore: (n: number) => void

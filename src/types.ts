@@ -1,11 +1,11 @@
 import { Balk } from "./balk"
 
-export interface State {
+export type State = {
   laps: number
   progress: number
 }
   
-export interface Team {
+export type Team = {
   id: number
   name: string
   balk: Balk
@@ -13,7 +13,7 @@ export interface Team {
   target: () => State
 }
 
-export interface Read {
+export type Read = {
   time: Date,
   stick: number,
   position: number
